@@ -15,47 +15,64 @@ import (
 	"gopkg.in/validator.v2"
 )
 
-
-// v for request
-// c for gin context
 func Validate(v interface{}, c *gin.Context) *responses.Fail {
-	
 	validate := InitValidator(c)
 	mapError := map[string]string{}
 
 	if errs := validate.Validate(v); errs != nil {
-		errorArray := errs.Error()                    //message จะบอกมี pattern ว่า FieldName: message error,...
-		re := regexp.MustCompile(`\b\w+?:`)           //กำหนดแพทเทิร์น Regex เพื่อจับคู่คำที่ตามด้วยเครื่องหมายโคลอน (:) ซึ่งก็คือชื่อฟิลด์ต่างๆ
-		listDatas := re.FindAllString(errorArray, -1) //ใช้แพทเทิร์น Regex เพื่อหาข้อความทั้งหมดที่ตรงกับแพทเทิร์นใน errorArray แล้วเก็บใน listDatas
-
-		for index, fieldName := range listDatas {
-			var listErr []string
-			key := lo.SnakeCase(strings.TrimSuffix(fieldName, ":")) //ตัด : และแปลงให้เป็น snake_case
-
-			//หาindex ของแต่ละ field เพื่อมาตัด string errorArray ให้เหลือแต่ error massage
-			indexFirstElement := strings.Index(errorArray, fieldName) + len(fieldName)
-			indexNextElement := len(errorArray)
-			if index != len(listDatas)-1 {
-				indexNextElement = strings.Index(errorArray, listDatas[index+1])
-			}
-			///
-
-			errMessages := strings.Split(strings.TrimSpace(errorArray[indexFirstElement:indexNextElement]), ",") //กรอกให้เหลือแต่ error massage
-			for _, errMsg := range errMessages {
-				if errMsg = strings.TrimSpace(errMsg); errMsg != "" {
-					listErr = append(listErr, HandleErrMesssage(key, errMsg)) //ส่งแต่ละ massage เข้าไปเพื่อหาข้อความภาษาไทย
-				}
-			}
-
-			mapError[key] = strings.Join(listErr, "|") //ขั้นแต่ละ error ด้วย |
-		}
-
+		errorArray := errs.Error() //message จะบอกมี pattern ว่า FieldName: message error,...
+		parseErrors(errorArray, mapError)
 		errResponse := responses.ValidateResponse(mapError)
 		return &errResponse
 	}
 
 	return &responses.Fail{}
 }
+
+func parseErrors(errorArray string, mapError map[string]string) {
+	re := regexp.MustCompile(`\b\w+?\[.*?\]?\.\w+?:|\b\w+?:`)
+	listDatas := re.FindAllString(errorArray, -1)
+
+	for index, fieldName := range listDatas {
+		var listErr []string
+		key := parseFieldName(strings.TrimSuffix(fieldName, ":"))
+
+		indexFirstElement := strings.Index(errorArray, fieldName) + len(fieldName)
+		indexNextElement := len(errorArray)
+		if index != len(listDatas)-1 {
+			indexNextElement = strings.Index(errorArray, listDatas[index+1])
+		}
+
+		errMessages := strings.Split(strings.TrimSpace(errorArray[indexFirstElement:indexNextElement]), ",")
+		for _, errMsg := range errMessages {
+			if errMsg = strings.TrimSpace(errMsg); errMsg != "" {
+				listErr = append(listErr, HandleErrMesssage(key, errMsg))
+			}
+		}
+
+		mapError[key] = strings.Join(listErr, "|")
+	}
+}
+
+func parseFieldName(fieldName string) string {
+	re := regexp.MustCompile(`(\w+|\[\d+\])`)
+	parts := re.FindAllString(fieldName, -1)
+
+	for i, part := range parts {
+		if strings.HasPrefix(part, "[") && strings.HasSuffix(part, "]") {
+			parts[i] = part // Keep array indices as they are
+		} else {
+			if i == 0 {
+				parts[i] = lo.SnakeCase(part)
+			} else {
+				parts[i] = "._" + lo.SnakeCase(part)
+			}
+		}
+	}
+
+	return strings.Join(parts, "")
+}
+
 
 
 // Custom
@@ -100,9 +117,6 @@ func dateFormat(v interface{}, param string) error {
 
 	return nil
 }
-
-
-
 
 // first param is table name
 // second param is column name

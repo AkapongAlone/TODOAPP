@@ -5,9 +5,14 @@ type Request struct {
 	SomeType string `validate:"duplicate"`
 }
 
+type MainTest struct {
+	Intro string `validate:"nonzero"`
+	Data  []SubTest
+}
 
-type Test struct {
+type SubTest struct {
 	ContractNumber string `validate:"unique=contract_info|contract_number,max=3"`
-	AcceptList     string `validate:"acceptlist=aek|earth"`
+	AcceptList     string `validate:"acceptlist=aek|earth,nonzero"`
 	TimeNow        string `validate:"date"`
+	SubTest        []SubTest
 }

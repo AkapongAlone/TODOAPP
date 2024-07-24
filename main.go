@@ -48,13 +48,36 @@ func main() {
 	{
 		// Postgres := databases.NewPostgres()
 
-		
 		v1.POST("validate", func(c *gin.Context) {
-			req := requests.Test{
+			subReq := []requests.SubTest{
+				{
+					ContractNumber: "contract04",
+					AcceptList:     "kaster",
+					TimeNow:        "2022-04-30",
+				},
+				{
+					ContractNumber: "contract04",
+					AcceptList:     "kaster",
+					TimeNow:        "2022-04-30",
+				},
+			}
+			newSubReq := []requests.SubTest{
+				{
 				ContractNumber: "contract04",
-				AcceptList:     "jan",
-				TimeNow:        "2022-04-30",
-				
+				AcceptList:     "kaster",
+				TimeNow:        "2022-04-30"},
+			}
+			newSubSubReq := []requests.SubTest{
+				{
+				ContractNumber: "contract04",
+				AcceptList:     "kaster",
+				TimeNow:        "2022-04-30"},
+			}
+			newSubReq[0].SubTest = newSubSubReq
+			subReq[0].SubTest = newSubReq
+			req := requests.MainTest{
+				Intro: "",
+				Data:  subReq,
 			}
 			if err := helpers.Validate(req, c); err != nil {
 				errResponse := *err

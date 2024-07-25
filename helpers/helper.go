@@ -36,6 +36,7 @@ func parseErrors(errorArray string, mapError map[string]string) {
 	for index, fieldName := range listDatas {
 		var listErr []string
 		key := parseFieldName(strings.TrimSuffix(fieldName, ":"))
+		lastFieldName := getLastFieldName(strings.TrimSuffix(fieldName, ":"))
 
 		indexFirstElement := strings.Index(errorArray, fieldName) + len(fieldName)
 		indexNextElement := len(errorArray)
@@ -46,12 +47,17 @@ func parseErrors(errorArray string, mapError map[string]string) {
 		errMessages := strings.Split(strings.TrimSpace(errorArray[indexFirstElement:indexNextElement]), ",")
 		for _, errMsg := range errMessages {
 			if errMsg = strings.TrimSpace(errMsg); errMsg != "" {
-				listErr = append(listErr, HandleErrMesssage(key, errMsg))
+				listErr = append(listErr, HandleErrMesssage(lo.SnakeCase(lastFieldName), errMsg))
 			}
 		}
 
 		mapError[key] = strings.Join(listErr, "|")
 	}
+}
+
+func getLastFieldName(fieldName string) string {
+	re := regexp.MustCompile(`\w+$`)
+	return re.FindString(fieldName)
 }
 
 func parseFieldName(fieldName string) string {
@@ -72,8 +78,6 @@ func parseFieldName(fieldName string) string {
 
 	return strings.Join(parts, "")
 }
-
-
 
 // Custom
 // example `validate:"acceptlist=asc|dec"`
